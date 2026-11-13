@@ -10,11 +10,11 @@ clicklight-landing/
 ├── styles/
 │   ├── main.css                Global tokens, base, type, buttons, placeholders, reveal
 │   └── blocks/                 One file per section
-│       ├── clicklight-3d.css   Clicklight 3D section (original styles)
+│       ├── clicklight-3d.css   Clicklights 3D section (original styles)
 │       ├── nav.css             Landing nav (sticky)
 │       ├── hero.css            Hero + sticky Buy button
 │       ├── highlights.css      Get the highlights (gallery + RGBW color picker)
-│       ├── installation.css    Installation types
+│       ├── installation.css    Installation types (Outward, Downward)
 │       ├── design.css          Design: 3D switch + image mode
 │       ├── buy.css             Product selector
 │       └── footer.css          Footer
@@ -23,8 +23,8 @@ clicklight-landing/
 │   └── clicklight-3d.js        3D section (three.js, ES module)
 └── assets/
     ├── video/                  Hero, highlights, Design and channel videos (H.264, no audio)
-    ├── images/                 Posters, caps image, user-friendly image, length images (50–450 ft)
-    └── models/clicklight.glb   3D model (unmodified)
+    ├── images/                 Posters, Design images, RGBW base frame + LED mask, length images (50–450 ft)
+    └── models/clicklight_hd.glb   3D model (unmodified)
 ```
 
 ## Run locally
@@ -46,3 +46,11 @@ Then open http://localhost:8000. On GitHub, enable **Settings → Pages** to pub
   The chosen options are sent as `?product=clicklight&length=…&channel=…&cap=…`.
 - **Prices** — `scripts/main.js`, `PRICES` (sale price) and `REGULAR` (struck-through price) per length.
 - **three.js** is loaded from the jsDelivr CDN (import map in `index.html`).
+
+## RGBW color picker (Get the highlights)
+
+Only the 4 RGB LEDs change color. The page draws the video's first frame
+(`assets/images/highlights-rgbw-off.jpg`) and lights the LED faces marked in
+`assets/images/highlights-rgbw-mask.png` (red = LED faces, green = glow), following
+the on/off timing of `highlights-rgbw.mp4`. If that video is replaced with a new shot,
+both images must be regenerated from it.

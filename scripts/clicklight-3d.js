@@ -1,4 +1,4 @@
-// Clicklight 3D section (three.js). Model: assets/models/clicklight.glb
+// Clicklights 3D section (three.js). Model: assets/models/clicklight_hd.glb
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
@@ -32,7 +32,7 @@ const world = new THREE.Group(); stage.add(world);   // tilts per scene
 
 const composer = new EffectComposer(renderer);
 composer.addPass(new RenderPass(scene, camera));
-const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.9, 0.5, 0.95);
+const bloom = new UnrealBloomPass(new THREE.Vector2(1, 1), 0.35, 0.35, 0.9);   // softer glow so the product stays visible
 composer.addPass(bloom);
 composer.addPass(new OutputPass());
 
@@ -61,8 +61,9 @@ const beamTex = (() => {
    3. Data: colors, caps, scenes
    ========================================================= */
 const MM = 1.6 / 57.5;                                   // scene units per millimetre (module = 1.6 units long)
-const LENS = new THREE.Vector3(0.226 * MM, 0.679 * MM, 9.0 * MM);
+const LENS = new THREE.Vector3(-0.88 * MM, 0, 8.0 * MM);   // centre / top of the cap in clicklight_hd.glb
 const WARM = new THREE.Color(1.0, 0.55, 0.2);
+const SMOKE = new THREE.Color('#5d6066');   // grey cap tint (smoked acrylic)
 
 const SWATCHES = [
   { name: 'Warm white', css: '#ffc58a', rgb: null,      warm: 1 },
@@ -153,8 +154,8 @@ class DataUrlTextures {
 }
 
 const pool = [];
-// 3D model: assets/models/clicklight.glb (unmodified)
-const MODEL_URL = 'assets/models/clicklight.glb';
+// 3D model: assets/models/clicklight_hd.glb (unmodified)
+const MODEL_URL = 'assets/models/clicklight_hd.glb';
 fetch(MODEL_URL).then(r => { if (!r.ok) throw new Error(r.status + ' ' + MODEL_URL); return r.arrayBuffer(); }).then(bin =>
 new GLTFLoader().register(p => new DataUrlTextures(p)).parse(bin, '', gltf => { template = gltf.scene; init(); },
   err => { console.error(err); document.getElementById('hint').textContent = 'The 3D model could not load.'; }))
@@ -166,11 +167,17 @@ function makeModule() {
   holder.scale.setScalar(1000 * MM);          // glb is in metres
   holder.position.z = -7.5 * MM;              // centre the module on its thickness
   const mats = {};
+  // the HD file carries its own studio lights and a ground shadow: the scene lights the module, so drop them
+  const drop = []; holder.traverse(o => { if (o.isLight || o.name === 'shadow') drop.push(o); }); drop.forEach(o => o.parent && o.parent.remove(o));
   holder.traverse(o => { if (o.isMesh) { o.material = o.material.clone(); mats[o.material.name] = o.material; } });
+  mats.led_rgb = mats.led_diffuser;     // 4 RGB LEDs
+  mats.led_warm = mats.led_phosphor;    // 2 warm white LEDs
+  mats.lens = mats.clear_lens;          // the cap
+  mats.lensOrig = { color: mats.lens.color.clone(), transmission: mats.lens.transmission, roughness: mats.lens.roughness };
   g.add(holder);
 
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: haloTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
-  halo.position.copy(LENS).add(new THREE.Vector3(0, 0, 0.03)); halo.scale.setScalar(1.3);
+  halo.position.copy(LENS).add(new THREE.Vector3(0, 0, 0.03)); halo.scale.setScalar(0.8);   // round glow the size of the cap
   g.add(halo);
   const light = new THREE.PointLight(0xffffff, 0, 3, 2);
   light.position.copy(LENS).add(new THREE.Vector3(0, 0, 0.2));
@@ -187,13 +194,18 @@ function makeModule() {
 const tmpC = new THREE.Color(), tmpW = new THREE.Color();
 function applyLED(m, k) {
   m.rgb.lerp(m.tRgb, k); m.warm += (m.tWarm - m.warm) * k;
-  m.mats.led_rgb.emissive.copy(m.rgb); m.mats.led_rgb.emissiveIntensity = 6;
-  m.mats.led_warm.emissive.copy(WARM).multiplyScalar(m.warm); m.mats.led_warm.emissiveIntensity = 6;
+  const gain = (typeof cur !== 'undefined' && cur && cur.led === 'pattern') ? 0.6 : 1;   // patterns: dimmer so colors and changes read
+  m.mats.led_rgb.emissive.copy(m.rgb); m.mats.led_rgb.emissiveIntensity = 1.6 * gain;
+  m.mats.led_warm.emissive.copy(WARM).multiplyScalar(m.warm); m.mats.led_warm.emissiveIntensity = 1.6 * gain;
   const c = tmpC.copy(m.rgb).add(tmpW.copy(WARM).multiplyScalar(m.warm));
   const br = Math.max(c.r, c.g, c.b);
   if (br > 0.001) c.multiplyScalar(1 / br);
-  m.halo.material.color.copy(c); m.halo.material.opacity = Math.min(1, br) * 0.85 * haloMul;
-  m.light.color.copy(c); m.light.intensity = Math.min(1, br) * 2.5;
+  // Clear cap: a bit brighter glow. Grey (smoked) cap: much less, so the LEDs show through instead of a lit button
+  const clearCap = haloMul >= 0.99, capGlow = clearCap ? 0.42 : 0.04, haloK = clearCap ? 0.42 : 0.16;
+  m.halo.material.color.copy(c); m.halo.material.opacity = Math.min(1, br) * haloK * gain;
+  m.light.color.copy(c); m.light.intensity = Math.min(1, br) * (clearCap ? 1.4 : 0.7) * gain;
+  // the round cap itself glows softly in the light color, so the light reads circular, not as square dies
+  if (m.mats.lens.emissive) { m.mats.lens.emissive.copy(c); m.mats.lens.emissiveIntensity = Math.min(1, br) * capGlow * gain; }
 }
 
 /* =========================================================
@@ -585,7 +597,11 @@ function tick(now) {
     else setLED(m, chosen);
     applyLED(m, cur.led === 'pattern' ? 0.3 : 0.1);
 
-    m.mats.lens.color.copy(lensColor); m.mats.lens.opacity = lensAlpha;
+    // Clear = the cap exactly as modelled; Grey = smoked: tinted but still see-through, so the LEDs show inside
+    const o = m.mats.lensOrig, gk = THREE.MathUtils.clamp((lensAlpha - 0.22) / (0.8 - 0.22), 0, 1);
+    m.mats.lens.color.copy(o.color).lerp(SMOKE, gk);
+    m.mats.lens.transmission = THREE.MathUtils.lerp(o.transmission, 0.9, gk);
+    m.mats.lens.roughness = THREE.MathUtils.lerp(o.roughness, 0.1, gk);
   });
 
   // beams and wall wash follow the chosen color

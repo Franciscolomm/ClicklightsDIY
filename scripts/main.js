@@ -85,9 +85,12 @@
   go(0); sync();
 
 
-  /* ---- HIGHLIGHTS · RGBW: pick a light color; the light in the video turns on in that color ----
-     Same list as "Light colors" in Design. A WebGL shader recolors only the LED light and its glow
-     (the red board, logo and housing keep their own color). Warm white shows the original video. */
+  /* ---- HIGHLIGHTS · RGBW: pick a light color; only the 4 RGB LEDs light up in that color ----
+     Same list as "Light colors" in Design. The camera in the RGBW video is fixed, so a WebGL shader draws:
+       base  = the video's first frame (lights off: clear cap, red board, unlit LEDs)
+       + the 4 RGB LED faces in the chosen color with a small glow (mask image),
+     switching on and off with the video (it measures how bright the board under the cap is in the current frame).
+     The cap and the 2 warm-white LEDs stay unlit. Warm white shows the original video. */
   const RGBW_COLORS = [
     { name:'Warm white', css:'#ffc58a', tint:null },
     { name:'Cool white', css:'#eef4ff', tint:'#dfe9ff' },
@@ -98,25 +101,33 @@
     { name:'Purple',     css:'#bf5af2', tint:'#7a1aff' },
     { name:'Pink',       css:'#ff2d92', tint:'#ff1a8c' },
   ];
+  const RGBW_OFF = 'assets/images/highlights-rgbw-off.jpg', RGBW_MASK = 'assets/images/highlights-rgbw-mask.png';
   const rgbwSlide = document.querySelector('.pg-slide[data-name="RGBW"]');
   const rgbwVid = rgbwSlide.querySelector('video'), rgbwCv = document.getElementById('rgbwCanvas');
   const rgbwSw = document.getElementById('rgbwSwatches'), rgbwName = document.getElementById('rgbwName');
-  let rgbwTint = null, gl = null, glU = {}, glTex = null;
+  let rgbwTint = null, gl = null, glU = {}, glTex = null, glReady = 0;
   (function initGL() {
     try { gl = rgbwCv.getContext('webgl', { premultipliedAlpha:false, preserveDrawingBuffer:true }); } catch (e) { gl = null; }
     if (!gl) return;
     const vs = 'attribute vec2 p; varying vec2 v; void main(){ v = p * .5 + .5; gl_Position = vec4(p, 0., 1.); }';
-    const fs = `precision mediump float; varying vec2 v; uniform sampler2D t; uniform vec3 tint; uniform vec2 c; uniform float asp;
+    const fs = `precision mediump float; varying vec2 v;
+      uniform sampler2D tVid, tOff, tMask; uniform vec3 tint;
+      float lum(vec3 c){ return dot(c, vec3(.299, .587, .114)); }
+      float board(sampler2D t){   // white board under the cap, between the LEDs
+        return (lum(texture2D(t, vec2(.4958, .5708)).rgb) + lum(texture2D(t, vec2(.4958, .4421)).rgb)
+              + lum(texture2D(t, vec2(.4271, .5107)).rgb) + lum(texture2D(t, vec2(.5651, .5107)).rgb)) * .25;
+      }
       void main(){
-        vec3 a = texture2D(t, v).rgb;
-        float d = length(vec2((v.x - c.x) * asp, v.y - c.y));
-        float l = dot(a, vec3(.299, .587, .114)), val = max(a.r, max(a.g, a.b)), gr = a.g / max(a.r, .001);
-        float core = 1. - smoothstep(.26, .34, d);                                    // lens + LEDs
-        float glow = (1. - smoothstep(.30, .80, d)) * (1. - smoothstep(.30, .55, l)); // soft halo around the module
-        float m = clamp(core + glow, 0., 1.) * smoothstep(.42, .66, gr);              // skip the red board
-        vec3 lit = tint * min(val * 1.15, 1.);
-        float hot = smoothstep(.88, 1., l) * .45; lit = lit * (1. - hot) + hot;       // white-hot LED centres
-        gl_FragColor = vec4(mix(a, lit, m), 1.);
+        float e = clamp((board(tVid) - board(tOff)) / .3, 0., 1.);   // 0 = off, 1 = on (follows the video)
+        vec3 off = texture2D(tOff, v).rgb, cur = texture2D(tVid, v).rgb;
+        vec3 mk = texture2D(tMask, v).rgb;                              // r = LED dies, g = tight glow around them
+        float L = lum(max(cur - off, 0.));                              // the real light in this frame (spill, flare, glow)
+        vec3 o = 1. - (1. - off) * exp(-tint * L * 2.24);               // same light, in the chosen colour (screen-add, no flat fill)
+        o = 1. - (1. - o) * exp(-tint * mk.g * 1.2 * e);                // coloured bloom hugging the dies
+        float centre = clamp((mk.r - .5) / .5, 0., 1.);
+        vec3 die = clamp(tint * 1.15 + .08, 0., 1.) * (1. - .55 * centre) + .55 * centre;   // saturated die, pale hot centre
+        o = mix(o, max(o, die), mk.r * e);
+        gl_FragColor = vec4(clamp(o, 0., 1.), 1.);
       }`;
     const sh = (type, src) => { const o = gl.createShader(type); gl.shaderSource(o, src); gl.compileShader(o); return o; };
     const pr = gl.createProgram(); gl.attachShader(pr, sh(gl.VERTEX_SHADER, vs)); gl.attachShader(pr, sh(gl.FRAGMENT_SHADER, fs)); gl.linkProgram(pr);
@@ -125,21 +136,32 @@
     const buf = gl.createBuffer(); gl.bindBuffer(gl.ARRAY_BUFFER, buf);
     gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1,-1, 1,-1, -1,1, 1,1]), gl.STATIC_DRAW);
     const loc = gl.getAttribLocation(pr, 'p'); gl.enableVertexAttribArray(loc); gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-    ['tint', 'c', 'asp'].forEach(n => glU[n] = gl.getUniformLocation(pr, n));
-    gl.uniform2f(glU.c, 0.498, 1 - 0.481);          // LED centre in the RGBW video (x, y from bottom)
-    glTex = gl.createTexture(); gl.bindTexture(gl.TEXTURE_2D, glTex);
+    glU.tint = gl.getUniformLocation(pr, 'tint');
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+    const mkTex = (unit, name) => {
+      const t = gl.createTexture(); gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+      [gl.TEXTURE_WRAP_S, gl.TEXTURE_WRAP_T].forEach(k => gl.texParameteri(gl.TEXTURE_2D, k, gl.CLAMP_TO_EDGE));
+      gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+      gl.uniform1i(gl.getUniformLocation(pr, name), unit); return t;
+    };
+    glTex = mkTex(0, 'tVid');
+    [[1, 'tOff', RGBW_OFF], [2, 'tMask', RGBW_MASK]].forEach(([unit, name, url]) => {
+      const t = mkTex(unit, name), img = new Image();
+      img.onload = () => { if (!gl) return; gl.activeTexture(gl.TEXTURE0 + unit); gl.bindTexture(gl.TEXTURE_2D, t);
+        gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img); glReady++; drawRGBW(); };
+      img.src = url;
+    });
   })();
   const hex3 = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16) / 255);
   function drawRGBW() {
-    if (!gl || !rgbwTint || rgbwVid.readyState < 2) return;
+    if (!gl || !rgbwTint || glReady < 2 || rgbwVid.readyState < 2) return;
     const w = rgbwVid.videoWidth, h = rgbwVid.videoHeight;
     if (rgbwCv.width !== w || rgbwCv.height !== h) { rgbwCv.width = w; rgbwCv.height = h; gl.viewport(0, 0, w, h); }
+    gl.activeTexture(gl.TEXTURE0); gl.bindTexture(gl.TEXTURE_2D, glTex);
     try { gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, rgbwVid); }
     catch (e) { gl = null; rgbwCv.classList.remove('live'); return; }   // video not readable -> plain video
-    gl.uniform3fv(glU.tint, hex3(rgbwTint)); gl.uniform1f(glU.asp, w / h);
+    const tc = hex3(rgbwTint), tm = Math.max(...tc) || 1;
+    gl.uniform3fv(glU.tint, tc.map(x => x / tm));
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     rgbwCv.classList.add('live');
   }

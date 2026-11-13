@@ -45,6 +45,8 @@
 .pg-dimg-stage figure video.pg-dmedia.show { opacity:1; }
 .pg-dimg-stage video::-webkit-media-controls { display:none !important; }
 #dChOpts { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+/* images whose subject sits on the right (App control): fill the stage and keep the phone in view */
+.pg-dmedia.pg-focus-right { object-fit:cover; object-position:74% 50%; }
 @media (max-width:820px) {
   .pg-dimg { border-radius:22px; }
   .pg-dimg-stage { top:16px; left:16px; right:16px; bottom:auto; height:52%; }
