@@ -42,8 +42,10 @@ Then open http://localhost:8000. On GitHub, enable **Settings → Pages** to pub
 
 ## Things to set
 
-- **Checkout URL** — `scripts/main.js`, constant `CHECKOUT_URL` (now `#checkout`).
-  The chosen options are sent as `?product=clicklight&length=…&channel=…&cap=…`.
+- **Checkout** — `scripts/main.js` (`BUNDLES`, `CAPS_VID`, `CHANNEL_VID`): Buy now opens
+  `https://myeverlights.com/checkout/?add-to-cart=<bundle id>&quantity=1&woosb_ids=…`, which adds the store's
+  "ClickLights NNN' Bundle" (WPC Product Bundles) with the chosen channel and cap colors, the same products the
+  ClickLights Bundle page on myeverlights.com adds. If a bundle is edited in WooCommerce, update these IDs and keys.
 - **Prices** — `scripts/main.js`, `PRICES` (sale price) and `REGULAR` (struck-through price) per length.
 - **three.js** is loaded from the jsDelivr CDN (import map in `index.html`).
 

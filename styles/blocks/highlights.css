@@ -43,7 +43,7 @@
   position:relative; overflow:hidden; transition:width .5s cubic-bezier(.4,0,.1,1); }
 .pg-dotsnav button.on { width:48px; background:#48484a; }
 .pg-dotsnav button span { position:absolute; inset:0; background:#f5f5f7; transform:scaleX(0); transform-origin:left; }
-.pg-dotsnav button.on span { animation:pgprog 6s linear forwards; }
+.pg-dotsnav button.on span { animation:pgprog var(--dur, 6s) linear forwards; }
 .pg-dotsnav.paused button.on span { animation-play-state:paused; }
 @keyframes pgprog { to { transform:scaleX(1); } }
 .pg-play { width:56px; height:56px; border-radius:50%; border:0; background:var(--panel); color:var(--txt); cursor:pointer; display:grid; place-items:center; }

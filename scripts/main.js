@@ -68,6 +68,9 @@
     slides.forEach((s, k) => { s.classList.toggle('on', k === gi); s.setAttribute('aria-hidden', k !== gi);
       const v = s.querySelector('video'); if (v && k !== gi) stopVideo(v); });
     dots.forEach((d, k) => { d.classList.remove('on'); d.setAttribute('aria-selected', k === gi); });
+    // a slide shows 6 s, or as long as its video when that is longer (App)
+    const sv = slides[gi].querySelector('video');
+    dots[gi].style.setProperty('--dur', (sv && sv.duration > 6 ? sv.duration + 0.4 : 6) + 's');
     void dotsEl.offsetWidth; dots[gi].classList.add('on');
     const v = curVideo(); if (v) { if (playing && inView) playFromStart(v); else { stopVideo(v); try { v.currentTime = 0; } catch (e) {} } }
   }
@@ -182,12 +185,40 @@
   });
 
   /* ---- BUY · product selector: length + channel color + cap color -> Buy now goes to checkout ----
-     Set CHECKOUT_URL to the store's checkout / cart URL. The choices are sent as query parameters. */
-  const CHECKOUT_URL = '#checkout';
+     Buy now goes straight to the store checkout with the chosen bundle in the cart.
+     It adds the same WooCommerce products as the "ClickLights Bundle" page on myeverlights.com: one
+     "ClickLights NNN' Bundle" per length (WPC Product Bundles), with the chosen channel and cap variations.
+     Link: /checkout/?add-to-cart=<bundle id>&quantity=1&woosb_ids=<item id>/<item key>/<qty>/,...
+     These IDs and keys come from the store; if a bundle is edited in WooCommerce, update them here. */
+  const CHECKOUT_URL = 'https://myeverlights.com/checkout/';
+  const BUNDLES = {
+    '50':{pid:6411,items:[[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',1],[3399,'h9q5',1],[4979,'0bmv',1],[5085,'pbon',1],['caps','yyp6',1],['channel','ooxp',12]]},
+    '100':{pid:5086,items:[[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',1],[3399,'h9q5',1],[4979,'0bmv',2],[5085,'pbon',1],['caps','yyp6',2],['channel','ooxp',21]]},
+    '150':{pid:5091,items:[['caps','sta6',3],[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',1],[3399,'h9q5',1],[4979,'16dk',3],[5085,'ow3f',1],['channel','691l',32]]},
+    '200':{pid:5093,items:[['caps','egdt',4],[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',1],[3399,'h9q5',1],[4979,'16dk',4],[5085,'ow3f',1],['channel','8xze',43]]},
+    '250':{pid:6178,items:[['caps','egdt',5],[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',1],[3399,'h9q5',1],[4979,'16dk',5],[5085,'ow3f',1],['channel','8xze',56]]},
+    '300':{pid:6179,items:[['caps','egdt',6],[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',1],[3399,'h9q5',1],[4979,'16dk',6],[5085,'ow3f',1],['channel','8xze',63]]},
+    '350':{pid:7540,items:[['caps','egdt',7],[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',2],[3399,'h9q5',2],[4979,'16dk',7],[5085,'ow3f',2],['channel','8xze',74]]},
+    '400':{pid:7541,items:[['caps','egdt',8],[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',2],[3399,'h9q5',2],[4979,'16dk',8],[5085,'ow3f',2],['channel','8xze',84]]},
+    '450':{pid:7542,items:[['caps','egdt',9],[3375,'slyn',1],[3377,'bnmr',1],[3404,'2xgq',1],[3376,'1pqh',1],[3952,'4xy4',1],['wire','ucg7',1],[3383,'euc2',2],[3399,'h9q5',2],[4979,'16dk',9],[5085,'ow3f',2],['channel','8xze',95]]},
+  };
+  const WIRE_VID = 5175;                                   // Wire: 16 gauge / 3-wire / Black / 50ft
+  const CAPS_VID = { 'clear':5033, 'grey':5034 };
+  const CHANNEL_VID = { 'black':5028, 'dark-bronze':5029, 'muskett-brown':5030, 'pebblestone-clay':5031, 'white':5032 };
+  function checkoutLink() {
+    const d = BUNDLES[cfg.length];
+    const ids = d.items.map(([id, key, qty]) => {
+      if (id === 'wire') id = WIRE_VID;
+      else if (id === 'caps') id = CAPS_VID[cfg.cap];
+      else if (id === 'channel') id = CHANNEL_VID[cfg.channel];
+      return `${id}/${key}/${qty}/`;
+    }).join(',');
+    return `${CHECKOUT_URL}?add-to-cart=${d.pid}&quantity=1&woosb_ids=${ids}`;
+  }
   const buyFixed = document.getElementById('buyFixed');
   new IntersectionObserver(es => buyFixed.classList.toggle('away', es[0].isIntersecting), { threshold:.25 }).observe(document.getElementById('buy'));
   const cfg = { length:null, channel:null, cap:null };
-  const NAMES = { 'white':'White', 'black':'Black', 'muskett-brown':'Muskett Brown', 'dark-bronze':'Dark Bronze',
+  const NAMES = { 'white':'White', 'black':'Black', 'muskett-brown':'Musket Brown', 'dark-bronze':'Dark Bronze',
                   'pebblestone-clay':'Pebblestone Clay', 'clear':'Clear', 'grey':'Grey' };
   // price per length (ft -> USD)
   const PRICES = { 50:840, 100:1340, 150:1840, 200:2340, 250:2840, 300:3340, 350:3840, 400:4340, 450:4840 };
@@ -211,7 +242,7 @@
     const ready = !missing.length;
     buyNow.setAttribute('aria-disabled', !ready);
     buyNow.textContent = ready ? `Buy now · ${money(PRICES[cfg.length])}` : 'Buy now';
-    buyNow.href = ready ? `${CHECKOUT_URL}${CHECKOUT_URL.includes('?') ? '&' : '?'}product=clicklight&length=${cfg.length}&channel=${cfg.channel}&cap=${cfg.cap}` : '#';
+    buyNow.href = ready ? checkoutLink() : '#';
     buyHint.textContent = ready ? `${cfg.length} ft · ${NAMES[cfg.channel]} channel · ${NAMES[cfg.cap]} caps`
       : 'Choose ' + missing.map(k => ({ length:'a length', channel:'a channel color', cap:'a cap color' })[k]).join(', ').replace(/, ([^,]*)$/, ' and $1') + '.';
   }
