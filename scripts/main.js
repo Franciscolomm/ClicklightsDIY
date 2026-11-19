@@ -68,16 +68,16 @@
     slides.forEach((s, k) => { s.classList.toggle('on', k === gi); s.setAttribute('aria-hidden', k !== gi);
       const v = s.querySelector('video'); if (v && k !== gi) stopVideo(v); });
     dots.forEach((d, k) => { d.classList.remove('on'); d.setAttribute('aria-selected', k === gi); });
-    // a slide shows 6 s, or as long as its video when that is longer (App)
+    // image slides: 6 s timer. Video slides: no timer, the bar follows the video and the slide changes only when it ends
     const sv = slides[gi].querySelector('video');
-    dots[gi].style.setProperty('--dur', (sv && sv.duration > 6 ? sv.duration + 0.4 : 6) + 's');
+    dots[gi].classList.toggle('vid', !!sv); dots[gi].querySelector('span').style.transform = '';
     void dotsEl.offsetWidth; dots[gi].classList.add('on');
     const v = curVideo(); if (v) { if (playing && inView) playFromStart(v); else { stopVideo(v); try { v.currentTime = 0; } catch (e) {} } }
   }
   const sync = () => {
     dotsEl.classList.toggle('paused', !playing || !inView);
     play.innerHTML = playing ? PAUSE : PLAY; play.setAttribute('aria-label', playing ? 'Pause' : 'Play');
-    const v = curVideo(); if (v) { if (playing && inView) { if (!v.ended) { v._want = true; v.play().catch(() => {}); } } else stopVideo(v); }
+    const v = curVideo(); if (v) { if (playing && inView) { if (!v.ended) { v._want = true; v.play().catch(() => {}); } else go(gi + 1); } else stopVideo(v); }
   };
   play.addEventListener('click', () => { playing = !playing; sync(); });
   function holdGallery() { playing = false; dotsEl.classList.add('paused'); play.innerHTML = PLAY; play.setAttribute('aria-label', 'Play'); }
@@ -85,6 +85,15 @@
   let sx = null;
   track.addEventListener('pointerdown', e => sx = e.clientX);
   track.addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 50) go(gi + (dx < 0 ? 1 : -1)); });
+  // video slides: progress = video time; next slide 1 s after the video ends (only while the carousel is playing)
+  slides.forEach((s, k) => { const v = s.querySelector('video'); if (!v) return;
+    v.addEventListener('ended', () => { if (k === gi && playing && inView) setTimeout(() => { if (k === gi && playing && inView) go(gi + 1); }, 1000); });
+  });
+  (function vidProgress() {
+    const v = curVideo(), d = dots[gi];
+    if (v && d && d.classList.contains('vid') && v.duration) d.querySelector('span').style.transform = `scaleX(${Math.min(1, v.currentTime / v.duration)})`;
+    requestAnimationFrame(vidProgress);
+  })();
   go(0); sync();
 
 
