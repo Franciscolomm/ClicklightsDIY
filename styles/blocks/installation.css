@@ -9,4 +9,8 @@
 [data-pane]:not(.on) { display:none; }
 
 /* ---------- installation types ---------- */
-.pg-inst-txt { margin-top:28px; max-width:640px; }
+.pg-inst-txt { width:min(100%, calc(72vh * 1496 / 988)); margin:28px auto 0; }
+.pg-inst-txt .pg-body { max-width:640px; }
+.pg-inst-media { display:block; width:min(100%, calc(72vh * 1496 / 988)); margin:0 auto; aspect-ratio:1496 / 988; object-fit:cover; border-radius:28px; background:#000; }
+.pg-inst-media::-webkit-media-controls { display:none !important; }
+@media (max-width:734px) { .pg-inst-media { border-radius:18px; } }

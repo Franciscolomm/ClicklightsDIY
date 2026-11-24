@@ -18,8 +18,22 @@
     btns.forEach(b => b.addEventListener('click', () => {
       btns.forEach(x => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
       box.querySelectorAll('[data-pane]').forEach(p => p.classList.toggle('on', p.dataset.pane === b.dataset.for));
+      if (box.closest('#installation')) playInstall();
     }));
   });
+
+  /* installation: the open tab's video plays once from the start (when the section is on screen) and holds its last frame */
+  const instSec = document.getElementById('installation');
+  const instVids = [...instSec.querySelectorAll('video')];
+  instVids.forEach(v => { if (v.dataset.embed) embedVideo(v); else { v.muted = true; v.loop = false; } });
+  let instSeen = false;
+  function playInstall() {
+    instVids.forEach(v => { if (v.closest('[data-pane]').classList.contains('on') && instSeen) playFromStart(v); else stopVideo(v); });
+  }
+  new IntersectionObserver(es => { const vis = es[0].isIntersecting;
+    if (vis && !instSeen) { instSeen = true; playInstall(); }
+    else if (!vis) { instSeen = false; instVids.forEach(stopVideo); }
+  }, { threshold:.35 }).observe(instSec);
 
   /* reveal on scroll */
   const rev = new IntersectionObserver(es => es.forEach(e => {
@@ -296,13 +310,10 @@
   const dFigs = [...dImg.querySelectorAll('figure')];
   let dCur = null;
   dImg.querySelectorAll('video[data-embed]').forEach(embedVideo);
-  const chVids = [...dImg.querySelectorAll('figure[data-img="channels"] video')];
+  const chVids = [...dImg.querySelectorAll('figure[data-img="channels"] .pg-dmedia')];   // one caps photo per channel finish
   const chBtns = [...dImg.querySelectorAll('#dChOpts button')];
   let chCur = (chBtns.find(b => b.classList.contains('on')) || chBtns[0]).dataset.ch;
-  const playCh = () => chVids.forEach(v => {          // selected finish plays once from the start and holds its last frame
-    const on = v.dataset.ch === chCur; v.classList.toggle('show', on);
-    if (on) playFromStart(v); else stopVideo(v);
-  });
+  const playCh = () => chVids.forEach(v => { v.classList.toggle('show', v.dataset.ch === chCur); });   // crossfade to the chosen finish
   chBtns.forEach(b => b.addEventListener('click', () => {
     chCur = b.dataset.ch;
     chBtns.forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
@@ -310,7 +321,7 @@
   }));
   const showFig = id => {
     dFigs.forEach(f => f.classList.toggle('show', f.dataset.img === id));
-    if (id === 'channels') playCh(); else chVids.forEach(stopVideo);
+    if (id === 'channels') playCh();
     dFigs.forEach(f => { if (f.dataset.img === 'channels') return;      // single-video options: play once from the start
       f.querySelectorAll('video').forEach(v => f.dataset.img === id ? playFromStart(v) : stopVideo(v)); });
   };

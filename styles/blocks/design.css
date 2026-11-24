@@ -41,8 +41,8 @@
 .pg-dimg-stage figure.show { opacity:1; }
 .pg-dimg-stage .ph { height:100%; aspect-ratio:auto; --rad:20px; }
 .pg-dmedia { position:absolute; inset:0; width:100%; height:100%; object-fit:contain; display:block; background:#000; border-radius:20px; }
-.pg-dimg-stage figure video.pg-dmedia { opacity:0; transition:opacity .4s ease; }
-.pg-dimg-stage figure video.pg-dmedia.show { opacity:1; }
+.pg-dimg-stage figure video.pg-dmedia, .pg-dimg-stage figure .pg-dmedia[data-ch] { opacity:0; transition:opacity .4s ease; }
+.pg-dimg-stage figure video.pg-dmedia.show, .pg-dimg-stage figure .pg-dmedia[data-ch].show { opacity:1; }
 .pg-dimg-stage video::-webkit-media-controls { display:none !important; }
 #dChOpts { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
 /* photos on a dark-grey backdrop: fade the edges into the black card */
