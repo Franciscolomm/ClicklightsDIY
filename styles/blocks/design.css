@@ -51,7 +51,18 @@
   mask-image:radial-gradient(ellipse 72% 70% at 50% 50%, #000 55%, transparent 100%); }
 /* images whose subject sits on the right (App control): fill the stage and keep the phone in view */
 .pg-dmedia.pg-focus-right { object-fit:cover; object-position:74% 50%; }
+/* phones / tablets, image mode: a normal column (media on top, options right below) instead of a fixed-height
+   frame, so there is no empty space between the picture and the options */
 @media (max-width:820px) {
   .pg-dimg { border-radius:22px; }
-  .pg-dimg-stage { top:16px; left:16px; right:16px; bottom:auto; height:52%; }
+  .pg-design-frame:not(.is-3d) .closer { position:absolute; inset:0; height:100% !important; min-height:0; visibility:hidden; }
+  .pg-design-frame:not(.is-3d) .pg-dimg { position:relative; inset:auto; display:flex; flex-direction:column; padding:12px 0 16px; }
+  .pg-design-frame.is-3d .pg-dimg { display:none; }
+  .pg-dimg-stage { position:relative; inset:auto; height:auto; aspect-ratio:16 / 10; margin:0 12px; }
+  .pg-dimg-stage .pg-dmedia { border-radius:16px; }
+  .pg-dimg .features { position:static; transform:none; margin-top:14px; }
+  .pg-dimg .features .card { margin:0 12px; }
+  .pg-dimg .features.open ul { padding:0; }
+  .pg-dimg .features .navbtns { margin-top:12px; }
+  #dChOpts { gap:6px; }
 }

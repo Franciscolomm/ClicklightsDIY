@@ -10,6 +10,7 @@
 .pg-slide .ph { position:absolute; inset:0; height:100%; aspect-ratio:auto; --rad:28px; }
 .pg-slide .pg-media { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
 .pg-slide .pg-media.fit { object-fit:contain; }
+.pg-mwrap { position:absolute; inset:0; }   /* RGBW video + its colour canvas, stacked */
 .pg-slide video::-webkit-media-controls { display:none !important; }
 /* shade behind the caption on video slides */
 .pg-slide.scrim::before { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
@@ -24,15 +25,22 @@
   border-radius:999px; padding:10px 18px 10px 12px; }
 .pg-hl-sw { display:flex; gap:10px; }
 .pg-hl-name { font-size:14px; color:#d2d2d7; min-width:84px; }
-/* phones: caption above the media instead of on top of it */
-@media (max-width:734px) {
+/* phones and tablets: caption above the media instead of on top of it */
+@media (max-width:900px) {
   .pg-slide { aspect-ratio:auto; display:flex; flex-direction:column; }
   .pg-slide .pg-cap { position:static; order:-1; max-width:none; padding:28px 24px 22px; font-size:21px; text-shadow:none; }
-  .pg-slide .pg-media, .pg-slide .ph { position:relative; inset:auto; height:auto; aspect-ratio:2520 / 1224; }
+  .pg-slide .pg-media, .pg-slide .ph, .pg-slide .pg-mwrap { position:relative; inset:auto; height:auto; aspect-ratio:2520 / 1224; }
+  .pg-slide .pg-mwrap .pg-media { position:absolute; inset:0; width:100%; height:100%; }
   .pg-slide .ph { --rad:0; }
   .pg-slide.scrim::before { display:none; }
-  .pg-hl-colors { position:static; order:2; margin:14px 16px 18px; flex-wrap:wrap; border-radius:22px; }
-  .pg-hl-sw { flex-wrap:wrap; }
+  .pg-hl-colors { position:static; order:2; margin:12px 12px 14px; gap:10px; padding:8px 12px; border-radius:18px; flex-wrap:wrap; justify-content:center; }
+  .pg-hl-sw { flex-wrap:nowrap; gap:7px; }
+  .pg-hl-sw .sw { width:26px; height:26px; }
+  .pg-hl-name { min-width:0; font-size:13px; }
+  /* every slide is as tall as the tallest one: centre each slide's content so the space is shared above and below */
+  .pg-track { align-items:stretch; }
+  .pg-slide { justify-content:center; border-radius:22px; }
+  .pg-galctl { margin-top:22px; }
 }
 .pg-cap { position:absolute; left:clamp(24px, 4vw, 52px); top:clamp(24px, 4vw, 48px); max-width:min(440px, 80%); z-index:2;
   margin:0; font-size:clamp(21px, 2.2vw, 28px); line-height:1.2; font-weight:600; }
