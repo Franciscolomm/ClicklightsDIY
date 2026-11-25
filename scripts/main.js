@@ -56,12 +56,38 @@
     v.addEventListener('contextmenu', e => e.preventDefault());
     v.src = URL.createObjectURL(new Blob([buf], { type:'video/mp4' }));
   }
+  /* Autoplay that also works on phones: play() is called right away (iOS/Android only start loading a video
+     when play() is called, so waiting for 'canplay' left it stuck until the visitor tapped it).
+     Every video stops a little before its very end and holds that frame, so a last black frame never shows.
+     If the phone blocks autoplay (e.g. Low Power Mode), the video jumps to that final frame instead. */
+  const END_HOLD = 0.15;                                   // seconds before the end where a video freezes
+  function prepVideo(v) {
+    if (v._prepped) return; v._prepped = true;
+    v.muted = true; v.defaultMuted = true; v.playsInline = true; v.loop = false; v.controls = false;
+    v.setAttribute('muted', ''); v.setAttribute('playsinline', ''); v.setAttribute('webkit-playsinline', '');
+  }
+  function holdFrame(v) {                                   // show the frame just before the end
+    const go = () => { try { v.currentTime = Math.max(0, v.duration - END_HOLD); } catch (e) {} };
+    v.readyState >= 1 ? go() : v.addEventListener('loadedmetadata', go, { once:true });
+  }
   function playFromStart(v) {
-    v._want = true;
-    const go = () => { if (!v._want) return; try { v.currentTime = 0; } catch (e) {} v.play().catch(() => {}); };
-    if (v.readyState >= 2) go(); else v.addEventListener('canplay', go, { once:true });
+    prepVideo(v); v._want = true; v._held = false;
+    try { v.currentTime = 0; } catch (e) {}
+    const pr = v.play();
+    if (pr && pr.catch) pr.catch(() => { if (v._want) holdFrame(v); });
+    if (v.readyState < 2) v.addEventListener('canplay', () => { if (v._want && v.paused && !v._held) v.play().catch(() => holdFrame(v)); }, { once:true });
   }
   function stopVideo(v) { v._want = false; v.pause(); }
+  // watch playing videos and freeze them just before the last frame; fires a 'held' event (used like 'ended')
+  (function endGuard() {
+    document.querySelectorAll('video').forEach(v => {
+      if (!v.paused && v.duration && !v._held && v.duration - v.currentTime <= END_HOLD) {
+        v.pause(); v._held = true; v.dispatchEvent(new Event('held'));
+      }
+    });
+    requestAnimationFrame(endGuard);
+  })();
+  document.querySelectorAll('video').forEach(v => { prepVideo(v); v.addEventListener('play', () => { v._held = false; }); });
 
   /* highlights gallery: each slide shows 6 s; a video plays once from the start when its slide becomes active */
   const track = document.getElementById('galTrack'), slides = [...track.children];
@@ -91,7 +117,7 @@
   const sync = () => {
     dotsEl.classList.toggle('paused', !playing || !inView);
     play.innerHTML = playing ? PAUSE : PLAY; play.setAttribute('aria-label', playing ? 'Pause' : 'Play');
-    const v = curVideo(); if (v) { if (playing && inView) { if (!v.ended) { v._want = true; v.play().catch(() => {}); } else go(gi + 1); } else stopVideo(v); }
+    const v = curVideo(); if (v) { if (playing && inView) { if (!v.ended && !v._held) { v._want = true; v.play().catch(() => {}); } else go(gi + 1); } else stopVideo(v); }
   };
   play.addEventListener('click', () => { playing = !playing; sync(); });
   function holdGallery() { playing = false; dotsEl.classList.add('paused'); play.innerHTML = PLAY; play.setAttribute('aria-label', 'Play'); }
@@ -101,7 +127,8 @@
   track.addEventListener('pointerup', e => { if (sx === null) return; const dx = e.clientX - sx; sx = null; if (Math.abs(dx) > 50) go(gi + (dx < 0 ? 1 : -1)); });
   // video slides: progress = video time; next slide 1 s after the video ends (only while the carousel is playing)
   slides.forEach((s, k) => { const v = s.querySelector('video'); if (!v) return;
-    v.addEventListener('ended', () => { if (k === gi && playing && inView) setTimeout(() => { if (k === gi && playing && inView) go(gi + 1); }, 1000); });
+    const next = () => { if (k === gi && playing && inView) setTimeout(() => { if (k === gi && playing && inView) go(gi + 1); }, 1000); };
+    v.addEventListener('held', next); v.addEventListener('ended', () => { if (!v._held) next(); });
   });
   (function vidProgress() {
     const v = curVideo(), d = dots[gi];
@@ -286,12 +313,12 @@
     for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
     hv.src = URL.createObjectURL(new Blob([buf], { type:'video/mp4' }));
     // if blob: media is blocked (some previews), fall back to a data: URL
-    hv.addEventListener('error', () => { if (hv.src.startsWith('blob:')) { hv.src = 'data:video/mp4;base64,' + hd.textContent.trim(); hv.play().catch(showLastFrame); } }, { once:true });
+    hv.addEventListener('error', () => { if (hv.src.startsWith('blob:')) { hv.src = 'data:video/mp4;base64,' + hd.textContent.trim(); hv.play().catch(() => holdFrame(hv)); } }, { once:true });
   }
-  hv.loop = false; hv.controls = false; hv.muted = true;
-  var showLastFrame = () => { const go = () => { hv.currentTime = Math.max(0, hv.duration - 0.04); };
-    hv.readyState >= 1 ? go() : hv.addEventListener('loadedmetadata', go, { once:true }); };
+  prepVideo(hv);
+  var showLastFrame = () => holdFrame(hv);
   const pr = hv.play(); if (pr && pr.catch) pr.catch(showLastFrame);   // if the browser blocks autoplay: show the last frame
+  hv.addEventListener('canplay', () => { if (hv.paused && !hv._held && hv.currentTime < 0.1) hv.play().catch(showLastFrame); }, { once:true });
   hv.addEventListener('ended', () => hv.pause());
   hv.addEventListener('contextmenu', e => e.preventDefault());
 

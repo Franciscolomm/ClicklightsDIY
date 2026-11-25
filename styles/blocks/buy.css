@@ -37,3 +37,7 @@
 .pg-checkout small { color:var(--muted2); font-size:13px; }
 @media (max-width:900px) { .pg-cfg { grid-template-columns:1fr; } .pg-cfg-preview { position:static; } }
 @media (max-width:480px) { .pg-opts.len { grid-template-columns:repeat(2, 1fr); } }
+
+/* never show the phone's native play button / controls on the page videos */
+video::-webkit-media-controls, video::-webkit-media-controls-panel, video::-webkit-media-controls-start-playback-button,
+video::-webkit-media-controls-overlay-play-button { display:none !important; -webkit-appearance:none; opacity:0; }
