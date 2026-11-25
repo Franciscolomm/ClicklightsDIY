@@ -313,7 +313,11 @@
   const chVids = [...dImg.querySelectorAll('figure[data-img="channels"] .pg-dmedia')];   // one caps photo per channel finish
   const chBtns = [...dImg.querySelectorAll('#dChOpts button')];
   let chCur = (chBtns.find(b => b.classList.contains('on')) || chBtns[0]).dataset.ch;
-  const playCh = () => chVids.forEach(v => { v.classList.toggle('show', v.dataset.ch === chCur); });   // crossfade to the chosen finish
+  dImg.querySelectorAll('figure[data-img="channels"] video').forEach(v => { if (!v.src && v.dataset.embed) embedVideo(v); });
+  const playCh = () => chVids.forEach(v => {          // crossfade to the chosen finish; a video plays once and holds its last frame
+    const on = v.dataset.ch === chCur; v.classList.toggle('show', on);
+    if (v.tagName === 'VIDEO') { if (on) playFromStart(v); else stopVideo(v); }
+  });
   chBtns.forEach(b => b.addEventListener('click', () => {
     chCur = b.dataset.ch;
     chBtns.forEach(x => { const on = x === b; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
@@ -321,7 +325,7 @@
   }));
   const showFig = id => {
     dFigs.forEach(f => f.classList.toggle('show', f.dataset.img === id));
-    if (id === 'channels') playCh();
+    if (id === 'channels') playCh(); else chVids.forEach(v => { if (v.tagName === 'VIDEO') stopVideo(v); });
     dFigs.forEach(f => { if (f.dataset.img === 'channels') return;      // single-video options: play once from the start
       f.querySelectorAll('video').forEach(v => f.dataset.img === id ? playFromStart(v) : stopVideo(v)); });
   };
