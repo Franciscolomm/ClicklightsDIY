@@ -1,0 +1,14 @@
+/* Landing nav (sticky) */
+
+/* ---------- landing nav (sticky) ---------- */
+.pg-lnav { position:sticky; top:0; z-index:60; height:52px; background:rgba(0,0,0,.72);
+  -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px);
+  border-bottom:1px solid transparent; transition:border-color .3s; }
+.pg-lnav.stuck { border-bottom-color:rgba(255,255,255,.14); }
+.pg-lnav-in { display:flex; align-items:center; justify-content:flex-end; height:100%; }
+.pg-lnav-r { display:flex; align-items:center; gap:22px; }
+.pg-lnav-r a { font-size:12px; color:#d2d2d7; }
+.pg-lnav-r a.on { color:#fff; }
+.pg-lnav-r a:hover { color:#fff; text-decoration:none; }
+.pg-buy-sm { background:var(--blue); color:#fff !important; border-radius:980px; padding:4px 12px; }
+@media (max-width:480px) { .pg-lnav-r { gap:16px; } }

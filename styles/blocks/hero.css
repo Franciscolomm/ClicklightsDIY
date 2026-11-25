@@ -1,0 +1,28 @@
+/* Hero + sticky Buy button */
+
+/* ---------- 3. hero ---------- */
+/* Hero: full screen, media centred, text bottom-left, buy pill bottom-right */
+.pg-hero { position:relative; height:calc(100vh - 52px); height:calc(100svh - 52px); min-height:560px; max-height:1100px;
+  background:#000; overflow:hidden; }
+.pg-hero-video { position:absolute; inset:0; width:100%; height:100%; display:block;
+  object-fit:cover; object-position:50% 40%;          /* fills the hero edge to edge: no black bars at the sides */
+  background:#000; pointer-events:none; }
+/* soft shade at the bottom so the title and Buy stay readable over the final scene */
+.pg-hero::after { content:""; position:absolute; left:0; right:0; bottom:0; height:38%; z-index:1; pointer-events:none;
+  background:linear-gradient(to top, rgba(0,0,0,.6), transparent); }
+.pg-hero-video::-webkit-media-controls { display:none !important; }
+.pg-hero-bar { position:absolute; left:0; right:0; bottom:clamp(28px, 5vh, 52px); z-index:2;
+  width:min(100% - 88px, 1400px); margin:0 auto; display:flex; justify-content:space-between; align-items:flex-end; gap:24px; }
+.pg-hero h1 { margin:0; font-size:clamp(21px, 1.6vw, 26px); font-weight:600; letter-spacing:-.01em; }
+.pg-hero-tag { margin:2px 0 0; font-size:clamp(44px, 4.4vw, 72px); line-height:1.05; font-weight:600; letter-spacing:-.025em; }
+/* sticky Buy: starts where it sat in the hero (bottom-right) and stays there while scrolling */
+.pg-buy-fixed { position:fixed; z-index:80; right:max(44px, calc((100vw - 1400px) / 2)); bottom:clamp(28px, 5vh, 52px);
+  font-size:14px; padding:8px 18px; box-shadow:0 8px 24px rgba(0,0,0,.45); transition:opacity .3s, transform .3s; }
+/* hidden only while the product selector (with its own Buy now) is on screen */
+.pg-buy-fixed.away { opacity:0; transform:translateY(12px); pointer-events:none; }
+@media (max-width:734px) {
+  .pg-hero { height:calc(100svh - 52px); }
+  .pg-hero-bar { width:calc(100% - 40px); flex-direction:column; align-items:stretch; }
+  .pg-buy-fixed { right:20px; bottom:20px; }
+  .pg-hero-bar { padding-bottom:56px; }
+}

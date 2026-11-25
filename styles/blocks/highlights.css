@@ -1,0 +1,51 @@
+/* Get the highlights (gallery + RGBW color picker) */
+
+/* ---------- gallery with progress (5. highlights) ---------- */
+#highlights { overflow:clip; }
+.pg-gal { width:min(100% - 44px, 1260px); margin:0 auto; }
+.pg-track { display:flex; gap:24px; transition:transform .9s cubic-bezier(.4,0,.1,1); touch-action:pan-y; }
+.pg-slide { flex:0 0 100%; position:relative; border-radius:28px; overflow:hidden; opacity:.35; transition:opacity .9s;
+  background:#000; aspect-ratio:2520 / 1224; }
+.pg-slide.on { opacity:1; }
+.pg-slide .ph { position:absolute; inset:0; height:100%; aspect-ratio:auto; --rad:28px; }
+.pg-slide .pg-media { position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+.pg-slide .pg-media.fit { object-fit:contain; }
+.pg-slide video::-webkit-media-controls { display:none !important; }
+/* shade behind the caption on video slides */
+.pg-slide.scrim::before { content:""; position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(160deg, rgba(0,0,0,.8) 0%, rgba(0,0,0,.45) 28%, transparent 52%); }
+.pg-slide.scrim .pg-cap { text-shadow:0 1px 12px rgba(0,0,0,.5); }
+.pg-slide.scrim .pg-cap span { color:#c7c7cc; }
+/* RGBW slide: color picker (same list as Light colors in Design) + tinted canvas over the video */
+.pg-tint { opacity:0; transition:opacity .3s; pointer-events:none; }
+.pg-tint.live { opacity:1; }
+.pg-hl-colors { position:absolute; z-index:3; left:clamp(24px, 4vw, 52px); bottom:clamp(24px, 3.5vw, 44px);
+  display:flex; align-items:center; gap:16px; background:rgba(29,29,31,.72); -webkit-backdrop-filter:blur(16px); backdrop-filter:blur(16px);
+  border-radius:999px; padding:10px 18px 10px 12px; }
+.pg-hl-sw { display:flex; gap:10px; }
+.pg-hl-name { font-size:14px; color:#d2d2d7; min-width:84px; }
+/* phones: caption above the media instead of on top of it */
+@media (max-width:734px) {
+  .pg-slide { aspect-ratio:auto; display:flex; flex-direction:column; }
+  .pg-slide .pg-cap { position:static; order:-1; max-width:none; padding:28px 24px 22px; font-size:21px; text-shadow:none; }
+  .pg-slide .pg-media, .pg-slide .ph { position:relative; inset:auto; height:auto; aspect-ratio:2520 / 1224; }
+  .pg-slide .ph { --rad:0; }
+  .pg-slide.scrim::before { display:none; }
+  .pg-hl-colors { position:static; order:2; margin:14px 16px 18px; flex-wrap:wrap; border-radius:22px; }
+  .pg-hl-sw { flex-wrap:wrap; }
+}
+.pg-cap { position:absolute; left:clamp(24px, 4vw, 52px); top:clamp(24px, 4vw, 48px); max-width:min(440px, 80%); z-index:2;
+  margin:0; font-size:clamp(21px, 2.2vw, 28px); line-height:1.2; font-weight:600; }
+.pg-cap span { color:var(--muted2); }
+.pg-galctl { display:flex; justify-content:center; align-items:center; gap:14px; margin-top:32px; }
+.pg-dotsnav { display:flex; gap:12px; align-items:center; background:var(--panel); border-radius:999px; padding:0 20px; height:56px; }
+.pg-dotsnav button { width:8px; height:8px; border-radius:99px; border:0; padding:0; background:#6e6e73; cursor:pointer;
+  position:relative; overflow:hidden; transition:width .5s cubic-bezier(.4,0,.1,1); }
+.pg-dotsnav button.on { width:48px; background:#48484a; }
+.pg-dotsnav button span { position:absolute; inset:0; background:#f5f5f7; transform:scaleX(0); transform-origin:left; }
+.pg-dotsnav button.on span { animation:pgprog 6s linear forwards; }
+.pg-dotsnav button.on.vid span { animation:none; transition:transform .25s linear; }   /* video slides: driven by the video's time */
+.pg-dotsnav.paused button.on span { animation-play-state:paused; }
+@keyframes pgprog { to { transform:scaleX(1); } }
+.pg-play { width:56px; height:56px; border-radius:50%; border:0; background:var(--panel); color:var(--txt); cursor:pointer; display:grid; place-items:center; }
+.pg-play svg { width:16px; height:16px; }
